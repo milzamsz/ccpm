@@ -226,18 +226,33 @@ Roles: the **builder** (this agent) implements; an **independent reviewer** (e.g
 - Record the technical plan and any scope changes that need agreement (as an Issue comment or in the PR body) before building them.
 
 ### 2. Implement and open a Draft PR
-Work on the task or epic branch (`epic/<name>` in `../epic-<name>`, or a task branch cut from it). Then:
+Pick the PR shape that matches the work. The head branch must contain exactly the commits for that PR.
+
+**Task PR** — one task, branched from the epic, merged into the epic branch:
 
 ```bash
 cd ../epic-<name>
-# run the project's validation commands (tests, lint, typecheck, build)
+git checkout epic/<name> && git pull origin epic/<name>
+git checkout -b task/<N>-<slug>
+# implement, then run the project's validation commands (tests, lint, typecheck, build)
+git push -u origin task/<N>-<slug>
+gh pr create --draft --base epic/<name> --head task/<N>-<slug> \
+  --title "Issue #<N>: <task title>" --body-file /tmp/pr-body.md
+```
+
+**Epic PR** — the finished epic branch, merged into `main`:
+
+```bash
+cd ../epic-<name>
+git checkout epic/<name> && git pull origin epic/<name>
+# run the project's validation commands on the whole epic
 git push -u origin epic/<name>
 gh pr create --draft --base main --head epic/<name> \
-  --title "<Epic or task title>" --body-file /tmp/pr-body.md
+  --title "Epic: <name>" --body-file /tmp/pr-body.md
 ```
 
 The PR body must:
-- link the Issue(s) with `Closes #<N>` (one line per task issue it completes; add the epic issue only when the PR completes the whole epic),
+- link the Issue(s): `Closes #<N>` for the task issue(s) the PR completes; in an epic PR, also the epic issue. GitHub only auto-closes issues when a PR merges into the default branch, so task PRs into `epic/<name>` need the manual close in step 5,
 - list the validation commands and the test results that were actually run (never results that were not run),
 - list scope changes that still need agreement.
 
@@ -245,36 +260,50 @@ The PR body must:
 - Fix the reviewer's findings on the same branch and PR; do not open a replacement PR.
 - After each revision, post a PR comment with: summary of changes, latest test results, and the head commit SHA (`git rev-parse HEAD`), and ask for re-review of that SHA.
 
-### 4. Merge gate (all three required)
-1. The independent reviewer has finished reviewing the **latest** head SHA. If any commit was pushed after that review, request re-review first.
-2. Required GitHub checks pass: `gh pr checks <PR> --required`.
-3. The repository owner has given **explicit** permission to merge this PR.
+### 4. Ready, checks, approval, then merge
+Do these in order:
 
-Then mark ready and merge through GitHub, pinned to the reviewed SHA:
-
-```bash
-reviewed_sha=<SHA the reviewer approved>
-gh pr ready <PR>
-gh pr merge <PR> --merge --match-head-commit "$reviewed_sha"
-```
+1. **Mark ready** when the builder considers the PR complete, so CI that only runs on non-draft PRs can start:
+   ```bash
+   gh pr ready <PR>
+   ```
+2. **Wait for required checks** on the current head and fix failures in the same PR (each fix is a new SHA and needs re-review):
+   ```bash
+   gh pr checks <PR> --required --watch
+   ```
+3. **Reviewer approval of the latest SHA**: the independent reviewer has finished reviewing the current head SHA (`gh pr view <PR> --json headRefOid`). If any commit was pushed after that review, request re-review first.
+4. **Explicit owner permission** to merge this PR.
+5. **Merge through GitHub**, pinned to the reviewed SHA:
+   ```bash
+   reviewed_sha=<SHA the reviewer approved>
+   gh pr merge <PR> --merge --match-head-commit "$reviewed_sha"
+   ```
 
 If the merge is refused (protection rules, failing checks, SHA mismatch), stop and report; do not work around it.
 
 ### 5. After GitHub confirms the merge
 
 ```bash
-gh pr view <PR> --json state,mergedAt,mergeCommit   # state must be MERGED
-git checkout main && git pull origin main
+gh pr view <PR> --json state,mergedAt,mergeCommit,baseRefName   # state must be MERGED
 ```
 
-Only after `state` is `MERGED`:
-- Close or update the task issues it completed (see "Closing an Issue"), and update local task/epic frontmatter and epic progress.
-- Close the epic only when every required task is closed:
+Do nothing below until `state` is `MERGED`.
+
+**Task PR merged into `epic/<name>`:**
+- Close the task issue (see "Closing an Issue"), update the task frontmatter and epic progress.
+- Do not close the epic and do not clean up anything: the epic is not in `main` yet.
+
+**Epic PR merged into `main`:**
+```bash
+git checkout main && git pull origin main
+```
+- Close any task issues still open that this PR completed, and update local frontmatter and epic progress.
+- Close the epic only when every required task is closed **and** this epic PR into `main` is `MERGED`:
 ```bash
 epic_issue=$(grep 'github:' .claude/epics/<name>/epic.md | grep -oE '[0-9]+$')
-gh issue close $epic_issue -c "Epic completed — merged via PR #<PR>"
+gh issue close $epic_issue -c "Epic completed — merged into main via PR #<PR>"
 ```
-- When the epic is closed: set `status: completed` in epic.md, then clean up:
+- Then set `status: completed` in epic.md and clean up:
 ```bash
 # Delete Neon branches for this epic (children first). No-op when Neon is not configured.
 # Stop if this exits non-zero.
