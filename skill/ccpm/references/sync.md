@@ -113,6 +113,8 @@ rm <file>.bak
 ```bash
 git checkout main && git pull origin main
 git worktree add ../epic-<name> -b epic/<name>
+# Publish the epic branch: task PRs use it as their base.
+git -C ../epic-<name> push -u origin epic/<name>
 
 # Optional Neon branch. Exits 0 when the Neon CLI or NEON_PROJECT_ID is missing.
 # Stop if this exits non-zero.
@@ -228,13 +230,11 @@ Roles: the **builder** (this agent) implements; an **independent reviewer** (e.g
 ### 2. Implement and open a Draft PR
 Pick the PR shape that matches the work. The head branch must contain exactly the commits for that PR.
 
-**Task PR** — one task, branched from the epic, merged into the epic branch:
+**Task PR** — one task, merged into the epic branch. The task branch `task/<N>-<slug>` and its worktree `../epic-<name>-task-<N>` are created when the task starts (`execute.md`, "Starting an Issue"), so all of the task's commits are already on it:
 
 ```bash
-cd ../epic-<name>
-git checkout epic/<name> && git pull origin epic/<name>
-git checkout -b task/<N>-<slug>
-# implement, then run the project's validation commands (tests, lint, typecheck, build)
+cd ../epic-<name>-task-<N>
+# run the project's validation commands (tests, lint, typecheck, build)
 git push -u origin task/<N>-<slug>
 gh pr create --draft --base epic/<name> --head task/<N>-<slug> \
   --title "Issue #<N>: <task title>" --body-file /tmp/pr-body.md
@@ -291,7 +291,14 @@ Do nothing below until `state` is `MERGED`.
 
 **Task PR merged into `epic/<name>`:**
 - Close the task issue (see "Closing an Issue"), update the task frontmatter and epic progress.
-- Do not close the epic and do not clean up anything: the epic is not in `main` yet.
+- Update the epic worktree and remove only this task's worktree and branch:
+```bash
+git -C ../epic-<name> pull origin epic/<name>
+git worktree remove ../epic-<name>-task-<N>
+git branch -d task/<N>-<slug>
+git push origin --delete task/<N>-<slug>
+```
+- Do not close the epic and do not clean up epic resources: the epic is not in `main` yet.
 
 **Epic PR merged into `main`:**
 ```bash

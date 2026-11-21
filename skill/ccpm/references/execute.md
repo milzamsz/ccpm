@@ -89,6 +89,11 @@ parallelization_factor: <1.0-5.0>
 ```bash
 bash <skill_path>/references/scripts/neon-branch.sh create <epic_name> --issue <N>
 ```
+6. Create the task branch and its own worktree from the published, up-to-date epic branch. All work for this issue is committed here, never directly on `epic/<name>`, so the task PR (see `sync.md`, "Review & Merge via Pull Request") contains only this issue's commits:
+```bash
+git -C ../epic-<name> pull origin epic/<name>
+git worktree add ../epic-<name>-task-<N> -b task/<N>-<slug> epic/<name>
+```
 
 ### Process
 
@@ -132,7 +137,7 @@ Task:
   description: "Issue #<N> Stream <X>"
   subagent_type: "general-purpose"
   prompt: |
-    You are working on Issue #<N> in the epic worktree at: ../epic-<name>/
+    You are working on Issue #<N> in the task worktree at: ../epic-<name>-task-<N>/ (branch task/<N>-<slug>)
     
     Your stream: <stream_name>
     Your scope — files to modify: <file_patterns>

@@ -133,8 +133,9 @@ grep 'github:' <file> | grep -oE '[0-9]+$'
 
 ## Git / Worktree Conventions
 
-- One branch per epic: `epic/<name>`
-- Worktrees live at `../epic-<name>/` (sibling to project root)
+- One branch per epic: `epic/<name>`, pushed to `origin` when the epic is synced
+- One branch per task: `task/<N>-<slug>`, cut from `epic/<name>` when the task starts
+- Worktrees live at `../epic-<name>/` (epic) and `../epic-<name>-task-<N>/` (task), siblings to the project root
 - Always start branches from an up-to-date main:
   ```bash
   git checkout main && git pull origin main
