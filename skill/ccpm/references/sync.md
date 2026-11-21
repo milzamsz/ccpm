@@ -290,8 +290,8 @@ gh pr view <PR> --json state,mergedAt,mergeCommit,baseRefName   # state must be 
 Do nothing below until `state` is `MERGED`.
 
 **Task PR merged into `epic/<name>`:**
-- Close the task issue (see "Closing an Issue"), update the task frontmatter and epic progress.
-- Update the epic worktree and remove only this task's worktree and branch:
+- From the project root (where Epic Sync created `.claude/epics/<name>/`; never inside a task worktree), close the task issue (see "Closing an Issue") and update the task frontmatter and epic progress.
+- Update the epic worktree and remove only this task's worktree and branch. The task worktree must be clean; if `git worktree remove` reports modified or untracked files, stop and report — never use `--force`:
 ```bash
 cd ../epic-<name>   # leave the task worktree first; never remove the current directory
 git pull origin epic/<name>
