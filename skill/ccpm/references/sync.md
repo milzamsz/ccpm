@@ -293,7 +293,8 @@ Do nothing below until `state` is `MERGED`.
 - Close the task issue (see "Closing an Issue"), update the task frontmatter and epic progress.
 - Update the epic worktree and remove only this task's worktree and branch:
 ```bash
-git -C ../epic-<name> pull origin epic/<name>
+cd ../epic-<name>   # leave the task worktree first; never remove the current directory
+git pull origin epic/<name>
 git worktree remove ../epic-<name>-task-<N>
 git branch -d task/<N>-<slug>
 git push origin --delete task/<N>-<slug>
@@ -302,6 +303,7 @@ git push origin --delete task/<N>-<slug>
 
 **Epic PR merged into `main`:**
 ```bash
+cd <project_root>   # the main repository, not ../epic-<name>; the cleanup below removes that worktree
 git checkout main && git pull origin main
 ```
 - Close any task issues still open that this PR completed, and update local frontmatter and epic progress.
