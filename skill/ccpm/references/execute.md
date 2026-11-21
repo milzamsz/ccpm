@@ -89,6 +89,11 @@ parallelization_factor: <1.0-5.0>
 ```bash
 bash <skill_path>/references/scripts/neon-branch.sh create <epic_name> --issue <N>
 ```
+6. Create the task branch and its own worktree from the published, up-to-date epic branch. All work for this issue is committed here, never directly on `epic/<name>`, so the task PR (see `sync.md`, "Review & Merge via Pull Request") contains only this issue's commits:
+```bash
+git -C ../epic-<name> pull origin epic/<name>
+git worktree add ../epic-<name>-task-<N> -b task/<N>-<slug> epic/<name>
+```
 
 ### Process
 
@@ -132,7 +137,7 @@ Task:
   description: "Issue #<N> Stream <X>"
   subagent_type: "general-purpose"
   prompt: |
-    You are working on Issue #<N> in the epic worktree at: ../epic-<name>/
+    You are working on Issue #<N> in the task worktree at: ../epic-<name>-task-<N>/ (branch task/<N>-<slug>)
     
     Your stream: <stream_name>
     Your scope — files to modify: <file_patterns>
@@ -216,12 +221,12 @@ Sync updates: "sync issue <N>"
 
 ## Agent Coordination Rules
 
-When multiple agents work in the same worktree simultaneously:
+When multiple agents work in the same worktree simultaneously (the streams of one issue share its task worktree `../epic-<name>-task-<N>` and branch `task/<N>-<slug>`):
 
 - Each agent works only on files in its assigned stream scope.
 - Agents commit frequently with `Issue #<N>: <description>` format.
 - Before modifying a shared file, check `git status <file>` — if another agent has it modified, wait and pull first.
-- Agents sync via commits: `git pull --rebase origin epic/<name>` before starting new file work.
+- To bring in changes merged into the epic, merge — never rebase, because the task branch may already be published in a PR: `git pull --no-rebase origin epic/<name>`. One agent at a time, with all work committed first.
 - Conflicts are never auto-resolved — agents report them and pause.
 - No `--force` flags ever.
 

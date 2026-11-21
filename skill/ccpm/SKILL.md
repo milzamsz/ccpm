@@ -30,7 +30,7 @@ Before doing anything, read `references/conventions.md` for path standards, fron
 ### 3. Sync — Push to GitHub
 **When**: Local epic/tasks need to become GitHub issues, progress needs to be posted as comments, or a bug is found and needs a linked issue created.
 **Read**: `references/sync.md`
-**Covers**: Epic sync (epic + tasks → GitHub issues), issue sync (progress comments), closing issues/epics, bug reporting against completed issues.
+**Covers**: Epic sync (epic + tasks → GitHub issues), issue sync (progress comments), Draft PR → review → merge via GitHub PR (never a direct push to main), closing issues/epics, bug reporting against completed issues.
 
 ### 4. Execute — Start building
 **When**: User wants to start working on one or more GitHub issues with parallel agents.
@@ -79,6 +79,6 @@ Sync to GitHub:     "push the X epic to GitHub"
 Start an issue:     "start working on issue 42"
 Check status:       "what's our status" / "standup"
 What's next:        "what should I work on next"
-Merge epic:         "merge the X epic"
+Merge epic:         "merge the X epic" (GitHub PR; needs review of latest SHA, green checks, owner approval)
 Report a bug:       "found a bug in issue 42" / "testing issue 42 revealed X"
 ```

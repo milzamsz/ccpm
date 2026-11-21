@@ -133,8 +133,9 @@ grep 'github:' <file> | grep -oE '[0-9]+$'
 
 ## Git / Worktree Conventions
 
-- One branch per epic: `epic/<name>`
-- Worktrees live at `../epic-<name>/` (sibling to project root)
+- One branch per epic: `epic/<name>`, pushed to `origin` when the epic is synced
+- One branch per task: `task/<N>-<slug>`, cut from `epic/<name>` when the task starts
+- Worktrees live at `../epic-<name>/` (epic) and `../epic-<name>-task-<N>/` (task), siblings to the project root
 - Always start branches from an up-to-date main:
   ```bash
   git checkout main && git pull origin main
@@ -142,6 +143,7 @@ grep 'github:' <file> | grep -oE '[0-9]+$'
   ```
 - Commit format inside epics: `Issue #<N>: <description>`
 - Never use `--force` in any git operation
+- Never push directly to `main`; changes reach `main` only through a GitHub PR merged under the gate in `sync.md` ("Review & Merge via Pull Request")
 - Optional database branch, after the worktree exists: `bash references/scripts/neon-branch.sh create <name>`. On merge: `bash references/scripts/neon-branch.sh cleanup <name>`. Exits 0 with a message when the Neon CLI or `NEON_PROJECT_ID` is missing. Never commit the env file it writes.
 
 ---
