@@ -187,7 +187,7 @@ Add sync marker to local files to prevent duplicate comments:
 
 ## Closing an Issue
 
-**Trigger**: User marks a task complete.
+**Trigger**: User marks a task complete. If the task's code goes through a PR, close the issue only after GitHub confirms that PR is merged (see "Review & Merge via Pull Request").
 
 ### Process
 
@@ -212,46 +212,81 @@ bash <skill_path>/references/scripts/neon-branch.sh cleanup <epic_name> --issue 
 
 ---
 
-## Merging an Epic
+## Review & Merge via Pull Request
 
-**Trigger**: User wants to merge a completed epic back to main.
+**Trigger**: User wants to deliver a task or epic, address review findings, or merge a completed epic ("merge the X epic").
 
-### Preflight
-- Verify worktree `../epic-<name>` exists.
-- Check for uncommitted changes in the worktree — block if dirty.
-- Warn if any task issues are still open.
+Code reaches `main` only through a GitHub Pull Request. Never `git push origin main`, never merge locally into `main`, never use `gh pr merge --admin`, `--force`, or any other branch-protection bypass.
 
-### Process
+Roles: the **builder** (this agent) implements; an **independent reviewer** (e.g. Codex) reviews; the **repository owner** gives the final merge decision.
+
+### 1. Read and plan
+- Read the GitHub Issue (`gh issue view <N> --json title,body,labels`) and the project's `AGENTS.md` / `CLAUDE.md`.
+- Use the Issue's acceptance criteria as the reference for done.
+- Record the technical plan and any scope changes that need agreement (as an Issue comment or in the PR body) before building them.
+
+### 2. Implement and open a Draft PR
+Work on the task or epic branch (`epic/<name>` in `../epic-<name>`, or a task branch cut from it). Then:
 
 ```bash
-# From worktree: run project tests if detectable
 cd ../epic-<name>
-# detect and run: npm test / pytest / cargo test / go test / etc.
+# run the project's validation commands (tests, lint, typecheck, build)
+git push -u origin epic/<name>
+gh pr create --draft --base main --head epic/<name> \
+  --title "<Epic or task title>" --body-file /tmp/pr-body.md
+```
 
-# From main repo:
+The PR body must:
+- link the Issue(s) with `Closes #<N>` (one line per task issue it completes; add the epic issue only when the PR completes the whole epic),
+- list the validation commands and the test results that were actually run (never results that were not run),
+- list scope changes that still need agreement.
+
+### 3. Address review findings in the same PR
+- Fix the reviewer's findings on the same branch and PR; do not open a replacement PR.
+- After each revision, post a PR comment with: summary of changes, latest test results, and the head commit SHA (`git rev-parse HEAD`), and ask for re-review of that SHA.
+
+### 4. Merge gate (all three required)
+1. The independent reviewer has finished reviewing the **latest** head SHA. If any commit was pushed after that review, request re-review first.
+2. Required GitHub checks pass: `gh pr checks <PR> --required`.
+3. The repository owner has given **explicit** permission to merge this PR.
+
+Then mark ready and merge through GitHub, pinned to the reviewed SHA:
+
+```bash
+reviewed_sha=<SHA the reviewer approved>
+gh pr ready <PR>
+gh pr merge <PR> --merge --match-head-commit "$reviewed_sha"
+```
+
+If the merge is refused (protection rules, failing checks, SHA mismatch), stop and report; do not work around it.
+
+### 5. After GitHub confirms the merge
+
+```bash
+gh pr view <PR> --json state,mergedAt,mergeCommit   # state must be MERGED
 git checkout main && git pull origin main
-git merge epic/<name> --no-ff -m "Merge epic: <name>"
-git push origin main
+```
 
+Only after `state` is `MERGED`:
+- Close or update the task issues it completed (see "Closing an Issue"), and update local task/epic frontmatter and epic progress.
+- Close the epic only when every required task is closed:
+```bash
+epic_issue=$(grep 'github:' .claude/epics/<name>/epic.md | grep -oE '[0-9]+$')
+gh issue close $epic_issue -c "Epic completed — merged via PR #<PR>"
+```
+- When the epic is closed: set `status: completed` in epic.md, then clean up:
+```bash
 # Delete Neon branches for this epic (children first). No-op when Neon is not configured.
 # Stop if this exits non-zero.
 bash <skill_path>/references/scripts/neon-branch.sh cleanup <name>
 
-# Cleanup
 git worktree remove ../epic-<name>
 git branch -d epic/<name>
 git push origin --delete epic/<name>
 
-# Archive
 mkdir -p .claude/epics/archived/
 mv .claude/epics/<name> .claude/epics/archived/
-
-# Close GitHub issues
-epic_issue=$(grep 'github:' .claude/epics/archived/<name>/epic.md | grep -oE '[0-9]+$')
-gh issue close $epic_issue -c "Epic completed and merged to main"
 ```
-
-Update epic.md frontmatter: `status: completed`.
 
 ---
 
