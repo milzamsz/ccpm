@@ -221,12 +221,12 @@ Sync updates: "sync issue <N>"
 
 ## Agent Coordination Rules
 
-When multiple agents work in the same worktree simultaneously:
+When multiple agents work in the same worktree simultaneously (the streams of one issue share its task worktree `../epic-<name>-task-<N>` and branch `task/<N>-<slug>`):
 
 - Each agent works only on files in its assigned stream scope.
 - Agents commit frequently with `Issue #<N>: <description>` format.
 - Before modifying a shared file, check `git status <file>` — if another agent has it modified, wait and pull first.
-- Agents sync via commits: `git pull --rebase origin epic/<name>` before starting new file work.
+- To bring in changes merged into the epic, merge — never rebase, because the task branch may already be published in a PR: `git pull --no-rebase origin epic/<name>`. One agent at a time, with all work committed first.
 - Conflicts are never auto-resolved — agents report them and pause.
 - No `--force` flags ever.
 
