@@ -160,6 +160,8 @@ Task:
 
 Streams with unmet dependencies are queued — launch them as their dependencies complete.
 
+If a stream agent fails with a usage-limit or rate-limit error (e.g. HTTP 429, "hit your … limit"), do not relaunch it in a loop and do not wait until this session is blocked too: hand the task over to the other agent right away under `review.md` §6 "Builder Failover" (when `failover` is enabled in `.claude/ccpm/roles.json`).
+
 **Step 4 — Assign on GitHub:**
 ```bash
 gh issue edit <N> --add-assignee @me --add-label "in-progress"

@@ -22,6 +22,8 @@ Each project picks a role mode in `.claude/ccpm/roles.json` (missing file = `age
 - **`agent-builds`** (default): this agent implements on task branches, opens PRs, requests review from the configured reviewer (e.g. `@codex review`), fixes findings on the same PR, and merges only under the merge gate in `references/sync.md`.
 - **`reviewer-agent`**: an external builder (e.g. Codex) implements; this agent writes build requests, verifies every head SHA locally, reviews it, asks the builder for fixes, and merges only under the gate in `references/review.md`.
 
+**Builder failover**: if the builder (this agent, or the external one) hits a usage/rate limit or stops responding, the other takes over the active task on the same branch and PR, posts a handoff, notifies the owner, and the configured roles return from the next task. A builder never reviews its own commits; nothing merges unreviewed (**Read**: `references/review.md` §6).
+
 The repository owner gives the final merge permission in both modes. Show or switch the mode with `/ccpm roles` or `/ccpm roles agent-builds|reviewer-agent` (**Read**: `references/review.md`, "Showing and Switching the Mode"). A PR keeps the mode it started with (`CCPM-Role-Mode:` line in its body).
 
 ## The Five Phases
@@ -93,5 +95,6 @@ What's next:        "what should I work on next"
 Merge epic:         "merge the X epic" (GitHub PR; needs review of latest SHA, green checks, owner approval)
 Role mode:          "/ccpm roles" (show) / "/ccpm roles reviewer-agent" (external builder, this agent reviews)
 Review a task PR:   "review the PR for issue 42" (reviewer-agent mode)
+Builder failover:   automatic on a usage limit / no response (review.md §6; "failover" in roles.json)
 Report a bug:       "found a bug in issue 42" / "testing issue 42 revealed X"
 ```
