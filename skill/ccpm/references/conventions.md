@@ -24,6 +24,8 @@ Read this before doing any file operations across all phases.
 │   │           └── execution.md  # Execution state
 │   └── archived/
 │       └── <feature-name>/        # Completed epics
+├── ccpm/
+│   └── roles.json                 # Role mode: who builds, who reviews (optional; see review.md)
 └── context/                       # Project context docs (separate system)
 ```
 
@@ -75,8 +77,12 @@ issue: <N>
 started: <ISO 8601>
 last_sync: <ISO 8601>
 completion: 0%
+role_mode: agent-builds     # or reviewer-agent; the mode the task started under
 ---
 ```
+
+### Role mode (.claude/ccpm/roles.json)
+Optional JSON file. Missing means `{"mode": "agent-builds", "reviewer": {"name": "codex", "request": "@codex review"}}`. Every field, the `/ccpm roles` switch and the `reviewer-agent` procedure are in `review.md`. Every CCPM PR body carries `CCPM-Role-Mode: <mode>`; a PR keeps that mode even if the project switches later.
 
 ---
 

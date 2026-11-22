@@ -1,6 +1,6 @@
 ---
 name: ccpm
-description: "CCPM - spec-driven project management: PRD → Epic → GitHub Issues → parallel agents → shipped code. Use this skill for anything in the software delivery lifecycle: writing a PRD ('write a PRD for X', 'let's plan X', 'scope this out'), parsing a PRD into an epic, decomposing an epic into tasks, syncing to GitHub ('sync the X epic', 'push tasks to github'), starting work on an issue ('start working on issue N', 'let's work on issue N'), analyzing parallel work streams, running standups ('standup', 'run the standup'), checking status ('what's next', 'what's blocked', 'what are we working on'), closing issues, or merging an epic. Use ccpm any time the user is talking about shipping a feature, managing work, or tracking progress — even if they don't say 'ccpm' or 'PRD'. Do NOT use for: debugging code, writing tests, reviewing PRs, or raw GitHub issue/PR operations with no delivery context."
+description: "CCPM - spec-driven project management: PRD → Epic → GitHub Issues → parallel agents → shipped code. Use this skill for anything in the software delivery lifecycle: writing a PRD ('write a PRD for X', 'let's plan X', 'scope this out'), parsing a PRD into an epic, decomposing an epic into tasks, syncing to GitHub ('sync the X epic', 'push tasks to github'), starting work on an issue ('start working on issue N', 'let's work on issue N'), analyzing parallel work streams, running standups ('standup', 'run the standup'), checking status ('what's next', 'what's blocked', 'what are we working on'), closing issues, merging an epic, choosing who builds vs. reviews ('/ccpm roles'), or reviewing a builder's task PR. Use ccpm any time the user is talking about shipping a feature, managing work, or tracking progress — even if they don't say 'ccpm' or 'PRD'. Do NOT use for: debugging code, writing tests, reviewing PRs with no CCPM task, or raw GitHub issue/PR operations with no delivery context."
 ---
 
 # CCPM - Claude Code Project Manager
@@ -14,6 +14,15 @@ Requirements live in files, not heads. Every feature starts as a PRD, becomes a 
 ## File Conventions
 
 Before doing anything, read `references/conventions.md` for path standards, frontmatter schemas, and GitHub operation rules. These apply to all phases.
+
+## Role Mode — Who Builds, Who Reviews
+
+Each project picks a role mode in `.claude/ccpm/roles.json` (missing file = `agent-builds`). Read it before starting an issue, opening or reviewing a PR, or merging.
+
+- **`agent-builds`** (default): this agent implements on task branches, opens PRs, requests review from the configured reviewer (e.g. `@codex review`), fixes findings on the same PR, and merges only under the merge gate in `references/sync.md`.
+- **`reviewer-agent`**: an external builder (e.g. Codex) implements; this agent writes build requests, verifies every head SHA locally, reviews it, asks the builder for fixes, and merges only under the gate in `references/review.md`.
+
+The repository owner gives the final merge permission in both modes. Show or switch the mode with `/ccpm roles` or `/ccpm roles agent-builds|reviewer-agent` (**Read**: `references/review.md`, "Showing and Switching the Mode"). A PR keeps the mode it started with (`CCPM-Role-Mode:` line in its body).
 
 ## The Five Phases
 
@@ -31,11 +40,13 @@ Before doing anything, read `references/conventions.md` for path standards, fron
 **When**: Local epic/tasks need to become GitHub issues, progress needs to be posted as comments, or a bug is found and needs a linked issue created.
 **Read**: `references/sync.md`
 **Covers**: Epic sync (epic + tasks → GitHub issues), issue sync (progress comments), Draft PR → review → merge via GitHub PR (never a direct push to main), closing issues/epics, bug reporting against completed issues.
+**Mode**: in `reviewer-agent`, also read `references/review.md` for reviewing the builder's PRs and the merge gate; post-merge steps stay in `sync.md`.
 
 ### 4. Execute — Start building
 **When**: User wants to start working on one or more GitHub issues with parallel agents.
 **Read**: `references/execute.md`
 **Covers**: Issue analysis (parallel work stream identification), launching parallel agents, coordinating worktrees.
+**Mode**: in `reviewer-agent`, read `references/review.md` instead: starting an issue sends a build request to the external builder rather than launching agents.
 
 ### 5. Track — Know where things stand
 **When**: User asks for status, standup report, what's blocked, what's next, or needs to validate state.
@@ -80,5 +91,7 @@ Start an issue:     "start working on issue 42"
 Check status:       "what's our status" / "standup"
 What's next:        "what should I work on next"
 Merge epic:         "merge the X epic" (GitHub PR; needs review of latest SHA, green checks, owner approval)
+Role mode:          "/ccpm roles" (show) / "/ccpm roles reviewer-agent" (external builder, this agent reviews)
+Review a task PR:   "review the PR for issue 42" (reviewer-agent mode)
 Report a bug:       "found a bug in issue 42" / "testing issue 42 revealed X"
 ```
