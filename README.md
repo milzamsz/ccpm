@@ -296,13 +296,13 @@ Each project chooses who writes the code and who reviews it in `.claude/ccpm/rol
 | Mode | Builder | Reviewer |
 |---|---|---|
 | `agent-builds` (default) | the agent running CCPM: branches, PRs, fixes on the same PR | an independent reviewer, e.g. Codex, asked with `@codex review` |
-| `reviewer-agent` | an external builder, e.g. Codex, asked with a build request on the task issue | the agent running CCPM: checks out every new head SHA, runs the tests itself, posts inline findings with severity (P1/P2 block merge), asks the builder to fix them, re-reviews |
+| `reviewer-agent` | an external builder, e.g. Codex, asked with a build request on the task issue | the agent running CCPM: checks out every new head SHA, runs the tests itself, posts inline findings with severity (P0/P1/P2 block merge), asks the builder to fix them, re-reviews |
 
 ```json
 {"mode": "reviewer-agent",
  "builder": {"name": "codex", "request": "github-issue", "mention": "@codex", "fix_prompt": "@codex address that feedback"},
  "reviewer": {"name": "claude"},
- "blocking": ["P1", "P2"],
+ "blocking": ["P0", "P1", "P2"],
  "verify": ["go test ./... -race -count=1"]}
 ```
 

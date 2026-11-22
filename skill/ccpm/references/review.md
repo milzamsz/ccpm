@@ -46,7 +46,7 @@ The role mode lives in `.claude/ccpm/roles.json` in the project root, next to `.
     "fix_prompt": "@codex address that feedback"
   },
   "reviewer": { "name": "claude" },
-  "blocking": ["P1", "P2"],
+  "blocking": ["P0", "P1", "P2"],
   "verify": ["go test ./... -race -count=1"],
   "max_rounds": 3,
   "conflicts": "ask-builder"
@@ -64,7 +64,7 @@ The role mode lives in `.claude/ccpm/roles.json` in the project root, next to `.
 | `builder.fix_prompt` | reviewer-agent | `"<mention> address that feedback"` | PR comment that asks the builder to fix the posted findings. |
 | `reviewer.name` | both | `"codex"` (agent-builds), the agent's own name (reviewer-agent) | Display name of the reviewer. |
 | `reviewer.request` | agent-builds | `"@codex review"` | PR comment that requests a review or re-review of the current head SHA. Unused in `reviewer-agent`. |
-| `blocking` | both | `["P1", "P2"]` | Severities that block merging. Findings at other severities (`P3`, `nit`) are non-blocking. In `agent-builds` this classifies the reviewer's findings; in `reviewer-agent` the agent's own. |
+| `blocking` | both | `["P0", "P1", "P2"]` | Severities that block merging. `P0` always blocks, even if a project config omits it. Findings at other severities (`P3`, `nit`) are non-blocking. In `agent-builds` this classifies the reviewer's findings; in `reviewer-agent` the agent's own. |
 | `verify` | both | `[]` | Verification commands, run from the root of the checked-out branch. Empty means: use the validation commands named in the repo's `AGENTS.md` / `CLAUDE.md` / CI config; if there are none, ask the owner before the first review. In `agent-builds` these are the validation commands run before pushing; in `reviewer-agent` the agent runs them itself on every head SHA. |
 | `max_rounds` | reviewer-agent | `3` | Consecutive review rounds without progress before the agent stops and asks the owner (see §5). |
 | `conflicts` | reviewer-agent | `"ask-builder"` | Merge conflicts with the base branch. `"ask-builder"`: ask the builder to resolve them. `"agent-merges-trivial"`: the owner allows the agent to push a merge commit that resolves trivial conflicts only (see §4). Only the owner sets this value. |
@@ -103,7 +103,7 @@ Unknown fields are kept untouched when the file is rewritten.
 Switching applies to tasks started and PRs opened after the switch. A PR keeps the mode it started with until it merges or closes:
 - Every CCPM PR body carries a line `CCPM-Role-Mode: <mode>`. In `agent-builds` the agent writes it when it opens the PR; in `reviewer-agent` the build request asks the builder for it, and if the PR arrives without it the agent adds it to the PR body (`gh pr edit <PR> --body-file <file>`; this edits the description, not code).
 - The task's `updates/<N>/progress.md` frontmatter records `role_mode: <mode>` when the task starts.
-- To find a PR's mode: the `CCPM-Role-Mode:` line, else `role_mode` in progress.md, else the current config.
+- To find a PR's mode: for a **task PR**, `role_mode` in the task's progress.md is authoritative (the agent wrote it; the PR description is builder-editable and therefore untrusted). If the PR's `CCPM-Role-Mode:` line disagrees with progress.md, do not use either gate yet: comment on the PR, restore the recorded mode in the description, and ask the owner before proceeding. Only an explicit owner instruction may change a task's mode after it started. Without progress.md (e.g. an epic PR the agent opened itself), use the `CCPM-Role-Mode:` line the agent wrote, else the current config.
 
 The epic PR (epic branch into `main`) uses the mode in force when it is opened.
 
@@ -232,6 +232,7 @@ If the checkout fails because the head moved after `gh pr view`, start again wit
 
 | Severity | Meaning | Blocking by default |
 |---|---|---|
+| P0 | Release-blocking: data corruption or loss, a security or tenant-isolation breach, an outage. Always blocks, regardless of the `blocking` config. | yes |
 | P1 | Wrong or unsafe: broken behaviour, security or tenancy hole, data loss, failing verification, unmet acceptance criterion. | yes |
 | P2 | A real defect or gap that must be fixed before merge: an edge case that breaks, missing test for changed behaviour, unsafe retry. | yes |
 | P3 | Worth improving, safe to merge without it. | no |
@@ -322,8 +323,11 @@ Merge only when all of these hold for the **current** head SHA (`gh pr view <PR>
 3. **Mark ready** if the PR is still a draft (`gh pr ready <PR>`), then **required checks** pass, or there are none: `gh pr checks <PR> --required --watch`. A failing check is a P1 finding: request a fix and re-review the new SHA.
 4. No conflicts with the base (`gh pr view <PR> --json mergeable` is `MERGEABLE`).
 5. **Explicit owner permission** to merge this PR, plus acknowledgement of any agent-authored merge commit (§4). Without it, comment that the PR is ready, with the summary verdict, and ask the owner; do not merge.
-6. Merge through GitHub, pinned to the reviewed SHA:
+6. Merge through GitHub, pinned to the SHA the agent actually reviewed and verified. Set `reviewed_sha` from that review (the `head_sha` recorded in §3a for the round that came out clean), re-check that it still equals the PR head, and refuse an empty value; an empty `--match-head-commit` drops the head-SHA guard:
    ```bash
+   reviewed_sha=<head SHA of the clean review round>
+   [ -n "$reviewed_sha" ] || { echo "reviewed_sha is empty; not merging"; exit 1; }
+   [ "$reviewed_sha" = "$(gh pr view <PR> --json headRefOid -q .headRefOid)" ] || { echo "head moved since review; re-review"; exit 1; }
    gh pr merge <PR> --merge --match-head-commit "$reviewed_sha"
    ```
 

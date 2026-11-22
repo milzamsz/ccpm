@@ -269,7 +269,7 @@ The PR body must:
 - Once the PR is open, request review of its head SHA with the configured `reviewer.request` comment (e.g. `@codex review`).
 - Fix the reviewer's findings on the same branch and PR; do not open a replacement PR.
 - After each revision, post a PR comment with: summary of changes, latest test results, and the head commit SHA (`git rev-parse HEAD`), and ask for re-review of that SHA with the configured `reviewer.request` (e.g. `@codex review`).
-- Findings at a severity listed in `blocking` (default `P1`, `P2`) must be fixed before merge; others are optional. Only the owner may waive a blocking finding.
+- Findings at a severity listed in `blocking` (default `P0`, `P1`, `P2`; `P0` always blocks even if a config omits it) must be fixed before merge; others are optional. Only the owner may waive a blocking finding.
 
 ### 4. Ready, checks, approval, then merge
 Do these in order:
@@ -287,6 +287,7 @@ Do these in order:
 5. **Merge through GitHub**, pinned to the reviewed SHA:
    ```bash
    reviewed_sha=<SHA the reviewer approved>
+   [ -n "$reviewed_sha" ] || { echo "reviewed_sha is empty; not merging"; exit 1; }
    gh pr merge <PR> --merge --match-head-commit "$reviewed_sha"
    ```
 
