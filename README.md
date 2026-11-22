@@ -40,6 +40,7 @@ Stop losing context. Stop blocking on tasks. Stop shipping bugs. CCPM gives your
 - [Install](#install)
 - [Usage](#usage)
 - [Workflow Phases](#workflow-phases)
+- [Role Modes: Who Builds, Who Reviews](#role-modes-who-builds-who-reviews)
 - [Skill Structure](#skill-structure)
 - [Example Flow](#example-flow)
 - [Proven Results](#proven-results)
@@ -238,6 +239,7 @@ CCPM activates automatically when your agent detects PM intent. Just talk natura
 | "what's next" / "what's blocked" | Priority queue from project files |
 | "close issue N" | Local + GitHub updated |
 | "merge the X epic" | Tests, merge, cleanup |
+| "/ccpm roles" / "/ccpm roles reviewer-agent" | Show or switch who builds and who reviews |
 
 ---
 
@@ -287,6 +289,27 @@ All tracking operations run as bash scripts — instant output, no LLM overhead.
 
 ---
 
+## Role Modes: Who Builds, Who Reviews
+
+Each project chooses who writes the code and who reviews it in `.claude/ccpm/roles.json`:
+
+| Mode | Builder | Reviewer |
+|---|---|---|
+| `agent-builds` (default) | the agent running CCPM: branches, PRs, fixes on the same PR | an independent reviewer, e.g. Codex, asked with `@codex review` |
+| `reviewer-agent` | an external builder, e.g. Codex, asked with a build request on the task issue | the agent running CCPM: checks out every new head SHA, runs the tests itself, posts inline findings with severity (P1/P2 block merge), asks the builder to fix them, re-reviews |
+
+```json
+{"mode": "reviewer-agent",
+ "builder": {"name": "codex", "request": "github-issue", "mention": "@codex", "fix_prompt": "@codex address that feedback"},
+ "reviewer": {"name": "claude"},
+ "blocking": ["P1", "P2"],
+ "verify": ["go test ./... -race -count=1"]}
+```
+
+Show the mode with `/ccpm roles`; switch with `/ccpm roles agent-builds` or `/ccpm roles reviewer-agent`. A switch applies to new tasks only: each PR records its mode (`CCPM-Role-Mode:` in the PR body) and keeps it. In both modes the repository owner gives the final merge permission, and nothing merges without a review of the latest commit. All fields and the review procedure are in [`references/review.md`](skill/ccpm/references/review.md).
+
+---
+
 ## Skill Structure
 
 ```
@@ -296,6 +319,7 @@ skill/ccpm/
     ├── plan.md               # PRD writing + parsing to epic
     ├── structure.md          # Epic decomposition into tasks
     ├── sync.md               # GitHub sync, progress comments, close, merge
+    ├── review.md             # Role modes, /ccpm roles, reviewer-agent procedure
     ├── execute.md            # Issue analysis + parallel agent launch
     ├── track.md              # Status, standup, search, next, blocked
     ├── conventions.md        # File formats, frontmatter schemas, git rules
@@ -312,6 +336,7 @@ Your project files live in `.claude/` in your project root:
 
 ```
 .claude/
+├── ccpm/roles.json            # Role mode (optional; default agent-builds)
 ├── prds/                     # Product requirement documents
 ├── epics/
 │   └── <feature>/

@@ -220,7 +220,15 @@ bash <skill_path>/references/scripts/neon-branch.sh cleanup <epic_name> --issue 
 
 Code reaches `main` only through a GitHub Pull Request. Never `git push origin main`, never merge locally into `main`, never use `gh pr merge --admin`, `--force`, or any other branch-protection bypass.
 
-Roles: the **builder** (this agent) implements; an **independent reviewer** (e.g. Codex) reviews; the **repository owner** gives the final merge decision.
+### Roles
+Who builds and who reviews depends on the project's role mode in `.claude/ccpm/roles.json` (missing file = `agent-builds`; schema and the `/ccpm roles` switch are in `review.md`). The **repository owner** gives the final merge decision in both modes.
+
+- **`agent-builds`** (default): the **builder** is this agent; the **independent reviewer** is `reviewer.name` (e.g. Codex), asked with the `reviewer.request` comment (e.g. `@codex review`). Steps 1–5 below apply as written.
+- **`reviewer-agent`**: the builder is an external agent (`builder.name`, e.g. Codex) and this agent is the reviewer. Steps 1–4 are replaced by `review.md` (build request, local verification, review loop, merge gate). The agent still opens the epic PR as in step 2 "Epic PR", and merges it under the gate in `review.md`. Step 5 below applies after any merge.
+
+A PR keeps the mode it started with: its body carries `CCPM-Role-Mode: <mode>`, and switching modes affects only tasks started and PRs opened afterwards.
+
+The rest of this section describes `agent-builds`.
 
 ### 1. Read and plan
 - Read the GitHub Issue (`gh issue view <N> --json title,body,labels`) and the project's `AGENTS.md` / `CLAUDE.md`.
@@ -234,7 +242,7 @@ Pick the PR shape that matches the work. The head branch must contain exactly th
 
 ```bash
 cd ../epic-<name>-task-<N>
-# run the project's validation commands (tests, lint, typecheck, build)
+# run the project's validation commands (`verify` in roles.json, else tests, lint, typecheck, build)
 git push -u origin task/<N>-<slug>
 gh pr create --draft --base epic/<name> --head task/<N>-<slug> \
   --title "Issue #<N>: <task title>" --body-file /tmp/pr-body.md
@@ -254,11 +262,14 @@ gh pr create --draft --base main --head epic/<name> \
 The PR body must:
 - link the Issue(s): `Closes #<N>` for the task issue(s) the PR completes; in an epic PR, also the epic issue. GitHub only auto-closes issues when a PR merges into the default branch, so task PRs into `epic/<name>` need the manual close in step 5,
 - list the validation commands and the test results that were actually run (never results that were not run),
-- list scope changes that still need agreement.
+- list scope changes that still need agreement,
+- carry the line `CCPM-Role-Mode: <mode>`, the role mode in force when the PR is opened (`agent-builds` in this section; an epic PR the agent opens in `reviewer-agent` mode carries `reviewer-agent`).
 
 ### 3. Address review findings in the same PR
+- Once the PR is open, request review of its head SHA with the configured `reviewer.request` comment (e.g. `@codex review`).
 - Fix the reviewer's findings on the same branch and PR; do not open a replacement PR.
-- After each revision, post a PR comment with: summary of changes, latest test results, and the head commit SHA (`git rev-parse HEAD`), and ask for re-review of that SHA.
+- After each revision, post a PR comment with: summary of changes, latest test results, and the head commit SHA (`git rev-parse HEAD`), and ask for re-review of that SHA with the configured `reviewer.request` (e.g. `@codex review`).
+- Findings at a severity listed in `blocking` (default `P1`, `P2`) must be fixed before merge; others are optional. Only the owner may waive a blocking finding.
 
 ### 4. Ready, checks, approval, then merge
 Do these in order:
@@ -271,7 +282,7 @@ Do these in order:
    ```bash
    gh pr checks <PR> --required --watch
    ```
-3. **Reviewer approval of the latest SHA**: the independent reviewer has finished reviewing the current head SHA (`gh pr view <PR> --json headRefOid`). If any commit was pushed after that review, request re-review first.
+3. **Reviewer approval of the latest SHA**: the independent reviewer has finished reviewing the current head SHA (`gh pr view <PR> --json headRefOid`) and left no open finding at a `blocking` severity. If any commit was pushed after that review, request re-review first.
 4. **Explicit owner permission** to merge this PR.
 5. **Merge through GitHub**, pinned to the reviewed SHA:
    ```bash

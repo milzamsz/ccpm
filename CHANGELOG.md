@@ -1,5 +1,17 @@
 # CCPM Changelog
 
+## [Unreleased]
+
+### ✨ Added
+- **Role modes: who builds, who reviews**
+  - New `.claude/ccpm/roles.json` chooses between `agent-builds` (default, unchanged behaviour: the agent builds, an independent reviewer such as Codex reviews) and `reviewer-agent` (an external builder such as Codex builds, the agent reviews)
+  - New `references/review.md`: config fields, `/ccpm roles` show/switch, build request template, local verification of every head SHA, review checklist, severity-badged inline findings (P1/P2 blocking by default), re-review loop, merge gate and stop rules for `reviewer-agent`
+  - PRs record their mode with a `CCPM-Role-Mode:` line and keep it when the project switches; task `progress.md` records `role_mode`
+
+### 🔄 Changed
+- `SKILL.md` routes Execute and Sync to `review.md` in `reviewer-agent` mode
+- `sync.md` "Roles" now points at the role modes; the agent-builds gate uses `reviewer.request` to ask for re-review and treats `blocking` severities as merge blockers
+
 ## [2025-01-24] - Major Cleanup & Issue Resolution Release
 
 ### 🎯 Overview

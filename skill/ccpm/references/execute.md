@@ -80,6 +80,8 @@ parallelization_factor: <1.0-5.0>
 
 **Trigger**: User wants to begin work on a specific GitHub issue.
 
+**Role mode**: this section is for `agent-builds` (the default). If `.claude/ccpm/roles.json` sets `"mode": "reviewer-agent"`, follow `review.md` §1 "Build Request" instead: the external builder implements the task and this agent reviews it. The same applies to each task in "Starting a Full Epic".
+
 ### Preflight
 1. Verify issue exists and is open: `gh issue view <N> --json state,title,labels,body`
 2. Find local task file (as above).
@@ -112,6 +114,7 @@ issue: <N>
 started: <datetime>
 last_sync: <datetime>
 completion: 0%
+role_mode: agent-builds
 ---
 ```
 
