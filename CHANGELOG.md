@@ -13,6 +13,7 @@
   - A builder never reviews its own commits: the original builder reviews the substitute's work; if it is limited the merge waits (`review_if_reviewer_limited: "wait"`), never unreviewed; the owner may review or waive explicitly
   - `return: "next-task"`: no mid-task switching back; the configured roles apply from the next task
   - Owner notified on every failover (PR comment @-mentioning the repository owner, plus a harness notification where available); if both agents are limited, work stops and resumes at the earliest reset
+  - `last_request` in progress.md records every request waiting on the external builder (build, fix, ping, failover) with its GitHub timestamp; the `no_response` timer measures from it
 
 ### 🔄 Changed
 - `SKILL.md` routes Execute and Sync to `review.md` in `reviewer-agent` mode

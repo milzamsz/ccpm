@@ -78,6 +78,7 @@ started: <ISO 8601>
 last_sync: <ISO 8601>
 completion: 0%
 role_mode: agent-builds     # or reviewer-agent; the mode the task started under
+last_request: null          # latest request waiting on the external builder (review.md §4 "Request record"): {kind, at, url}
 failover: []                # builder failovers, appended (review.md §6): "failover: <from>→<to>, reason: <rate_limit|no_response|unavailable>, at: <time>, reset: <time|unknown>, handoff_sha: <sha>"
 ---
 ```
