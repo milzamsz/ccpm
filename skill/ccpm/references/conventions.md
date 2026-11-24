@@ -78,11 +78,13 @@ started: <ISO 8601>
 last_sync: <ISO 8601>
 completion: 0%
 role_mode: agent-builds     # or reviewer-agent; the mode the task started under
+last_request: null          # pending external builder request (review.md §4): {kind, at, url, branch, head}
+failover: []                # builder failovers, appended (review.md §6): "failover: <from>→<to>, reason: <rate_limit|no_response|unavailable>, at: <time>, reset: <time|unknown>, handoff_sha: <sha>"
 ---
 ```
 
 ### Role mode (.claude/ccpm/roles.json)
-Optional JSON file. Missing means `{"mode": "agent-builds", "reviewer": {"name": "codex", "request": "@codex review"}}`. Every field, the `/ccpm roles` switch and the `reviewer-agent` procedure are in `review.md`. Every CCPM PR body carries `CCPM-Role-Mode: <mode>`; a PR keeps that mode even if the project switches later.
+Optional JSON file. Missing means `{"mode": "agent-builds", "reviewer": {"name": "codex", "request": "@codex review"}}`. Every field, the `/ccpm roles` switch and the `reviewer-agent` procedure are in `review.md`. Every CCPM PR body carries `CCPM-Role-Mode: <mode>`; a PR keeps that mode even if the project switches later. The optional `failover` block (on by default when both roles are filled) lets the other agent take over the active task when the builder is limited or unresponsive (`review.md` §6).
 
 ---
 

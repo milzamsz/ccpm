@@ -7,10 +7,19 @@
   - New `.claude/ccpm/roles.json` chooses between `agent-builds` (default, unchanged behaviour: the agent builds, an independent reviewer such as Codex reviews) and `reviewer-agent` (an external builder such as Codex builds, the agent reviews)
   - New `references/review.md`: config fields, `/ccpm roles` show/switch, build request template, local verification of every head SHA, review checklist, severity-badged inline findings (P1/P2 blocking by default), re-review loop, merge gate and stop rules for `reviewer-agent`
   - PRs record their mode with a `CCPM-Role-Mode:` line and keep it when the project switches; task `progress.md` records `role_mode`
+- **Builder failover** (`review.md` §6, `failover` block in `roles.json`, on by default when both roles are filled)
+  - When the builder hits a usage/rate limit (agent: any sub-agent or request fails with e.g. HTTP 429, fail over before the main session is blocked) or the external builder reports it cannot run or does not respond within `no_response` (default 45m), the other agent takes over the active task on the same branch and PR
+  - Handoff comment (done / not done, last head SHA, reason, reset time); the incoming builder re-runs every `verify` command before continuing; `failover: <from>→<to>, reason, at, reset` recorded in progress.md (authoritative) and the PR body
+  - A builder never reviews its own commits: the original builder reviews the substitute's work; if it is limited the merge waits (`review_if_reviewer_limited: "wait"`), never unreviewed; the owner may review or waive explicitly
+  - `return: "next-task"`: no mid-task switching back; the configured roles apply from the next task
+  - Owner notified on every failover (PR comment @-mentioning the repository owner, plus a harness notification where available); if both agents are limited, work stops and resumes at the earliest reset
+  - `last_request` in progress.md records every request waiting on the external builder (build, fix, ping, failover) with its GitHub timestamp; the `no_response` timer measures from it
 
 ### 🔄 Changed
 - `SKILL.md` routes Execute and Sync to `review.md` in `reviewer-agent` mode
 - `sync.md` "Roles" now points at the role modes; the agent-builds gate uses `reviewer.request` to ask for re-review and treats `blocking` severities as merge blockers
+- `sync.md` merge gate: during a builder failover the review must come from the agent that did not build the latest commits; no unreviewed merge
+- `review.md` stop rules: with failover on, an unresponsive builder triggers failover instead of only asking the owner
 
 ## [2025-01-24] - Major Cleanup & Issue Resolution Release
 

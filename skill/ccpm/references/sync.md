@@ -228,6 +228,8 @@ Who builds and who reviews depends on the project's role mode in `.claude/ccpm/r
 
 A PR keeps the mode it started with: its body carries `CCPM-Role-Mode: <mode>`, and switching modes affects only tasks started and PRs opened afterwards.
 
+**Builder failover**: if the builder hits a usage/rate limit or stops responding, the other agent takes over the active task on the same branch and PR (`review.md` §6, `failover` in `roles.json`). The task's progress.md records it; the merge gate then needs a review of the current head SHA by the agent that did not build the latest commits.
+
 The rest of this section describes `agent-builds`.
 
 ### 1. Read and plan
@@ -282,7 +284,7 @@ Do these in order:
    ```bash
    gh pr checks <PR> --required --watch
    ```
-3. **Reviewer approval of the latest SHA**: the independent reviewer has finished reviewing the current head SHA (`gh pr view <PR> --json headRefOid`) and left no open finding at a `blocking` severity. If any commit was pushed after that review, request re-review first.
+3. **Reviewer approval of the latest SHA**: the independent reviewer has finished reviewing the current head SHA (`gh pr view <PR> --json headRefOid`) and left no open finding at a `blocking` severity. If any commit was pushed after that review, request re-review first. During a builder failover the reviewer is the agent that did not author the latest commits (`review.md` §6d); if it is limited, wait until it resets — **never merge unreviewed**. Only the owner may review instead or explicitly waive the review.
 4. **Explicit owner permission** to merge this PR.
 5. **Merge through GitHub**, pinned to the reviewed SHA:
    ```bash

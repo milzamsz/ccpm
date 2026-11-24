@@ -308,6 +308,8 @@ Each project chooses who writes the code and who reviews it in `.claude/ccpm/rol
 
 Show the mode with `/ccpm roles`; switch with `/ccpm roles agent-builds` or `/ccpm roles reviewer-agent`. A switch applies to new tasks only: each PR records its mode (`CCPM-Role-Mode:` in the PR body) and keeps it. In both modes the repository owner gives the final merge permission, and nothing merges without a review of the latest commit. All fields and the review procedure are in [`references/review.md`](skill/ccpm/references/review.md).
 
+**Builder failover.** If the builder hits a usage or rate limit (e.g. HTTP 429) or does not respond to a build or fix request within 45 minutes, the other agent takes over the active task on the same branch and PR. It posts a handoff note (done / not done, last SHA, reason, reset time), re-runs the `verify` commands before continuing, @-mentions the repository owner, and records the failover in the task's progress and the PR. The configured roles come back with the next task. A builder never reviews its own commits: the original builder reviews the substitute's work, and if it is still limited the merge waits. Configure with `"failover": {"enabled": true, "triggers": ["rate_limit", "no_response:45m", "unavailable"], "return": "next-task", "review_if_reviewer_limited": "wait", "notify_owner": true}` (the defaults).
+
 ---
 
 ## Skill Structure
